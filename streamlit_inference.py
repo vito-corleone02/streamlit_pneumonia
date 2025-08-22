@@ -29,7 +29,11 @@ from xgboost import XGBClassifier
 from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
 
 from keras.preprocessing import image
+
+# for local
 # from keras.preprocessing.image import ImageDataGenerator
+
+# for streamlit
 from keras.src.legacy.preprocessing.image import ImageDataGenerator
 
 from textblob import TextBlob
@@ -475,7 +479,6 @@ simulate_button = st.sidebar.button("Run Agent-Based Simulation")
 # ===============================
 # 6. HealthVer Dataset Evaluation (unchanged)
 # ===============================
-st.markdown("## 📊 HealthVer Benchmark Evaluation")
 
 @st.cache_data
 def load_healthver_data():
@@ -858,4 +861,3 @@ st.markdown(
     - Advanced visualizations: sentiment distributions, misinformation rates, and simulation trends
     """
 )
-
