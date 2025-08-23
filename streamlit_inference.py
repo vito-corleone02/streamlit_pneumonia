@@ -471,8 +471,8 @@ model_choice = st.sidebar.radio("Choose X-ray Model for Prediction", ("Logistic 
 uploaded_file = st.sidebar.file_uploader("Upload Chest X-Ray Image", type=["jpg", "jpeg", "png"])
 
 # Agent-Based Simulation Controls (unchanged)
-num_agents = st.sidebar.slider("Number of Patient Agents", 5, 50, 10)
-num_clinicians = st.sidebar.slider("Number of Clinician Agents", 1, 10, 3)
+num_agents = st.sidebar.slider("Number of Patient Agents", 5, 100, 10)
+num_clinicians = st.sidebar.slider("Number of Clinician Agents", 1, 20, 3)
 misinfo_exposure = st.sidebar.slider("Baseline Misinformation Exposure", 0.0, 1.0, 0.5, 0.05)
 simulate_button = st.sidebar.button("Run Agent-Based Simulation")
 
@@ -532,8 +532,48 @@ try:
     st.markdown(f"**✅ Test Accuracy:** {test_acc:.3f}")
 
     # Classification Report
-    st.text("Classification Report (Test Set):")
-    st.text(classification_report(y_test, y_test_pred, target_names=label_map.keys()))
+    st.markdown("### 📊 Classification Report (Test Set)")
+    
+    # Get the classification report as a string and parse it
+    report_str = classification_report(y_test, y_test_pred, target_names=label_map.keys(), output_dict=True)
+    
+    # Convert to DataFrame for better display
+    report_df = pd.DataFrame(report_str).transpose()
+    
+    # Round numeric values to 3 decimal places
+    numeric_columns = ['precision', 'recall', 'f1-score', 'support']
+    for col in numeric_columns:
+        if col in report_df.columns:
+            report_df[col] = report_df[col].round(3)
+    
+    # Display the table with better formatting
+    st.dataframe(
+        report_df,
+        use_container_width=True,
+        hide_index=False
+    )
+    
+    # Also show accuracy metrics separately for better visibility
+    st.markdown("### 📈 Overall Metrics")
+    
+    # Create a summary metrics table
+    metrics_data = {
+        'Metric': ['Accuracy', 'Macro Avg F1', 'Weighted Avg F1'],
+        'Value': [
+            f"{report_df.loc['accuracy', 'precision']:.3f}",
+            f"{report_df.loc['macro avg', 'f1-score']:.3f}",
+            f"{report_df.loc['weighted avg', 'f1-score']:.3f}"
+        ]
+    }
+    
+    metrics_df = pd.DataFrame(metrics_data)
+    
+    # Display the metrics table
+    st.dataframe(
+        metrics_df,
+        use_container_width=True,
+        hide_index=True
+    )
 
 except Exception as e:
     st.error(f"⚠️ Could not evaluate HealthVer dataset: {e}")
@@ -589,7 +629,6 @@ if dataset_source == "Reddit (Free API)":
     with st.spinner("Fetching Reddit posts..."):
         texts = get_reddit_posts(search_query, size=search_count)
     if texts:
-        st.success(f"✅ Collected {len(texts)} Reddit posts.")
         st.session_state.data_collected = True
 
 elif dataset_source == "Tavily Web Search":
@@ -597,7 +636,6 @@ elif dataset_source == "Tavily Web Search":
         with st.spinner("Searching web with Tavily..."):
             texts = get_tavily_results(search_query, size=search_count, api_key=tavily_api_key)
         if texts:
-            st.success(f"✅ Collected {len(texts)} web results.")
             st.session_state.data_collected = True
     else:
         st.warning("⚠️ Please provide a Tavily API key to enable web search.")
@@ -607,14 +645,12 @@ elif dataset_source == "Wikipedia (Free)":
     with st.spinner("Searching Wikipedia..."):
         texts = get_wikipedia_results(search_query, size=search_count)
     if texts:
-        st.success(f"✅ Collected {len(texts)} Wikipedia results.")
         st.session_state.data_collected = True
 
 elif dataset_source == "Hacker News (Free)":
     with st.spinner("Searching Hacker News..."):
         texts = get_hackernews_results(search_query, size=search_count)
     if texts:
-        st.success(f"✅ Collected {len(texts)} Hacker News stories.")
         st.session_state.data_collected = True
 
 elif dataset_source == "HealthVer (local CSV)":
@@ -645,7 +681,6 @@ elif dataset_source == "HealthVer (local CSV)":
                     series_text = df_hv[c].dropna().astype(str).tolist()
                     texts.extend(series_text)
                 if texts:
-                    st.success(f"✅ Loaded {len(texts)} texts from {hv_split} CSV ({', '.join(use_cols)}).")
                     st.session_state.data_collected = True
                 else:
                     st.warning("CSV loaded but no text found in selected columns.")
@@ -675,20 +710,6 @@ elif dataset_source == "FullFact (local JSON)":
             st.error(f"Failed to read FullFact JSON: {e}")
 
 if texts:
-    if dataset_source == "Reddit (Free API)":
-        st.markdown(f"### Latest Reddit posts mentioning '{search_query}'")
-    elif dataset_source == "Tavily Web Search":
-        st.markdown(f"### Web search results for '{search_query}'")
-    elif dataset_source == "Wikipedia (Free)":
-        st.markdown(f"### Wikipedia results for '{search_query}'")
-    elif dataset_source == "Hacker News (Free)":
-        st.markdown(f"### Hacker News stories about '{search_query}'")
-    else:
-        st.markdown("### Dataset posts")
-
-    for post in texts[:5]:
-        st.write(f"- {post[:200]}...")
-
     misinformation_results = detect_misinformation(texts[:10])
     st.markdown("### Misinformation Detection")
     for text, tag in misinformation_results:
